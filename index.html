@@ -311,13 +311,6 @@ function renderNumbers(){
   }).join('');
 }
 
-function pick(n){
-  // 번호 선택은 서버(방장)가 최종 승인한 뒤 화면에 확정 표시
-  if(!started||myNum||Object.values(players).some(p=>p.num===n)||!conn)return;
-  $('status').textContent=`${n}번 선택 확인 중...`;
-  $('numbers').querySelectorAll('button').forEach(b=>b.disabled=true);
-  conn.send({type:"pick",num:Number(n)});
-}
 
 function randomLadder(){
   const rows=14, L=Array.from({length:rows},()=>[]);
