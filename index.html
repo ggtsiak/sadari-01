@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🍂 가을 어느날 운명 🍂</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:linear-gradient(135deg,#fff8ed,#f4eadc);color:#3e3025}
+.wrap{max-width:900px;margin:auto;padding:16px}.hero{text-align:center;padding:12px}.hero h1{margin:4px;font-size:30px}.hero p{margin:5px;color:#786756}
+.card{background:#fff;border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 5px 22px #00000012}
+h2,h3{margin-top:4px}.row{display:flex;gap:9px;flex-wrap:wrap}.row>*{flex:1}
+button{border:0;border-radius:12px;padding:13px 16px;font-size:16px;font-weight:800;cursor:pointer}
+.primary{background:#d96f32;color:white}.secondary{background:#eee6dc;color:#4c3b2c}.danger{background:#6f6257;color:#fff}
+input{width:100%;padding:13px;border:1px solid #d8c9b8;border-radius:11px;font-size:16px}
+.hidden{display:none!important}.code{font-size:36px;font-weight:900;text-align:center;letter-spacing:6px}.center{text-align:center}
+.status{text-align:center;font-weight:800;margin:8px}.note{font-size:13px;color:#7c6c5c;line-height:1.55}
+.players,.results{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.player,.result{background:#f7f0e7;border-radius:12px;padding:11px;text-align:center}.player small{color:#8a7968}
+.numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.num{background:#f3eadf;color:#513d2b;border:2px solid transparent;min-height:68px;font-size:23px}.num.selected{border-color:#d96f32;background:#fff0e5}.num.taken{opacity:.3}
+#ladder{width:100%;height:500px;background:#fffdf9;border-radius:16px}
+#qr{display:block;margin:10px auto;max-width:180px}.winner{font-size:25px;font-weight:900;text-align:center;padding:14px;background:#fff0df;border-radius:14px;margin-top:10px}
+@media(max-width:600px){.hero h1{font-size:24px}.card{padding:14px}.players,.results{grid-template-columns:repeat(2,1fr)}#ladder{height:440px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hero"><h1>🍂 가을 어느날 운명 🍂</h1><p>참가 인원에 맞춰 즐기는 회식용 사다리게임</p></div>
+
+<div id="start" class="card center">
+<h2>게임 시작</h2>
+<p>참가방법: '참가하기' 클릭 > '번호' 입력 > '이름' 입력 > '참가하기' 클릭</p>
+<div style="max-width:360px;margin:12px auto;text-align:left">
+<label for="peopleCount"><b>참가 인원</b> (방장 포함)</label>
+<select id="peopleCount" style="width:100%;padding:13px;border:1px solid #d8c9b8;border-radius:11px;font-size:16px;margin-top:6px">
+<option value="2">2명</option><option value="3">3명</option><option value="4">4명</option>
+<option value="5">5명</option><option value="6">6명</option><option value="7">7명</option>
+<option value="8">8명</option><option value="9" selected>9명</option><option value="10">10명</option>
+<option value="11">11명</option><option value="12">12명</option><option value="13">13명</option>
+<option value="14">14명</option><option value="15">15명</option><option value="16">16명</option>
+</select>
+</div>
+<div class="row">
+<button class="primary" onclick="host()">🎮 방 만들기</button>
+<button class="secondary" onclick="showJoin()">📱 참가하기</button>
+</div>
+<div id="joinBox" class="hidden" style="margin-top:12px">
+<input id="roomInput" maxlength="2" inputmode="numeric" placeholder="2자리 방 코드">
+<input id="nameInput" maxlength="12" placeholder="내 이름" style="margin-top:8px">
+<button class="primary" style="width:100%;margin-top:8px" onclick="join()">참가하기</button>
+</div>
+
+</div>
+
+<div id="game" class="hidden">
+<div class="card center">
+<div id="roleTitle"></div><div class="code" id="roomCode"></div><div id="status" class="status"></div><div id="peopleInfo" class="note"></div>
+<div id="shareArea" class="hidden" style="margin-top:14px;padding:14px;background:#fff8ed;border-radius:16px">
+  <div style="font-weight:900;font-size:18px">📱 휴대폰으로 QR을 찍고 참가하세요</div>
+  <img id="qr" alt="sadari-01.netlify.app 접속 QR코드"
+       style="width:220px;height:220px;margin:10px auto;display:block">
+  <div style="font-size:14px;font-weight:800">sadari-01.netlify.app</div>
+  <div id="shareText" class="note" style="margin-top:5px"></div>
+</div>
+</div>
+
+<div id="hostControls" class="card hidden">
+<h3>👥 참가 현황</h3><div id="players" class="players"></div>
+<div class="row" style="margin-top:12px"><button class="primary" onclick="startGame()">🪜 사다리 시작</button><button class="secondary" onclick="resetGame()">↻ 다시하기</button></div>
+</div>
+
+<div id="playerControls" class="card hidden">
+<h3>🎯 1~<span id="numberMax">9</span>번 중 번호를 선택하세요</h3><div id="numbers" class="numbers"></div>
+<p class="note">방장이 사다리를 시작한 후 번호를 선택하세요. 선택한 번호의 사다리 경로와 결과가 공개되고 결과표에 실시간으로 누적됩니다. 참가자 모두가 선택하면 남은 번호는 방장에게 자동 배정됩니다.</p>
+</div>
+
+<div id="ladderCard" class="card hidden">
+<h3>🪜 사다리 공개</h3>
+<canvas id="ladder"></canvas>
+<div id="winner" class="winner hidden"></div>
+<div id="results" class="results" style="margin-top:10px"></div>
+</div>
+</div>
+</div>
+
+
+<script>
+let N=9, names=[], isHost=false, room="", myName="", myNum=null;
+let playerId="", hostToken="", players={}, lines=[], outcomes=[], started=false, revealed=[], revealQueue=[];
+let pollTimer=null, lastRevision=0, busy=false;
+
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function rand(){return String(Math.floor(Math.random()*100)).padStart(2,'0')}
+function makeId(){return (crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random()).replace(/-/g,'')}
+function apiUrl(){return '/.netlify/functions/sadari'}
+function focusRoomInput(){const el=$('roomInput');if(el){el.focus();el.select()}}
+function focusNameInput(){const el=$('nameInput');if(el)el.focus()}
+function blurInput(el){if(el)el.blur()}
+
+function showJoin(){
+  $('joinBox').classList.remove('hidden');
+  setTimeout(focusRoomInput,80);
+}
+
+async function api(op, data={}){
+  const res=await fetch(apiUrl(),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({op,...data})
+  });
+  let d={};
+  try{d=await res.json()}catch(e){}
+  if(!res.ok) throw new Error(d.error||'서버 통신 오류');
+  return d;
+}
+
+async function getState(){
+  if(!room || (!hostToken && !playerId)) return;
+  const q=new URLSearchParams({room});
+  if(hostToken){q.set('role','host');q.set('token',hostToken)}
+  else {q.set('role','player');q.set('id',playerId)}
+  try{
+    const res=await fetch(apiUrl()+'?'+q.toString(),{cache:'no-store'});
+    if(!res.ok)return;
+    const d=await res.json();
+    applyState(d);
+  }catch(e){}
+}
+
+function applyState(d){
+  if(!d || !d.state)return;
+  const st=d.state;
+  N=Number(st.N||N);
+  names=Array.from({length:N},(_,i)=>i+1);
+  players=st.players||{};
+  started=!!st.started;
+  lines=st.lines||[];
+  outcomes=st.outcomes||[];
+  revealed=st.revealed||[];
+  lastRevision=Number(st.revision||lastRevision);
+  if(!isHost && playerId && players[playerId] && players[playerId].num){
+    myNum=Number(players[playerId].num);
+  }
+  render();
+  status();
+  if(started){
+    $('playerControls').classList.remove('hidden');
+    showLadder(false);
+    renderNumbers();
+  } else if(isHost){
+    $('playerControls').classList.add('hidden');
+  }
+  renderResults();
+}
+
+function startPolling(){
+  if(pollTimer)clearInterval(pollTimer);
+  getState();
+  pollTimer=setInterval(getState,1000);
+}
+
+async function host(){
+  N=parseInt($('peopleCount').value,10);
+  names=Array.from({length:N},(_,i)=>i+1);
+  isHost=true; room=rand(); hostToken=makeId();
+  try{
+    let created=false;
+    for(let i=0;i<10 && !created;i++){
+      try{
+        const d=await api('create',{room,N,token:hostToken});
+        applyState(d); created=true;
+      }catch(e){
+        if(!/이미 사용|occupied|exists/i.test(e.message)) throw e;
+        room=rand();
+      }
+    }
+    if(!created) throw new Error('방 생성에 실패했습니다. 다시 시도해 주세요.');
+    openGame("🎮 방장");
+    $('hostControls').classList.remove('hidden');
+    $('shareArea').classList.remove('hidden');
+    $('playerControls').classList.add('hidden');
+    makeQR(); render(); status();
+    startPolling();
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+async function join(){
+  const roomEl=$('roomInput'), nameEl=$('nameInput');
+  room=roomEl.value.trim(); myName=nameEl.value.trim();
+  if(!/^\d{2}$/.test(room)||!myName){
+    alert("2자리 방 코드와 이름을 입력하세요.");return;
+  }
+  blurInput(roomEl);blurInput(nameEl);
+  try{
+    const d=await api('join',{room,name:myName});
+    playerId=d.playerId;
+    isHost=false;
+    applyState(d);
+    openGame("📱 참가자");
+    $('playerControls').classList.add('hidden');
+    startPolling();
+  }catch(e){
+    alert(e.message||"방을 찾을 수 없습니다. 방 코드와 인터넷 연결을 확인하세요.");
+  }
+}
+
+function openGame(role){
+  $('start').classList.add('hidden');
+  $('game').classList.remove('hidden');
+  $('roleTitle').innerHTML='<h2>'+role+'</h2>';
+  $('roomCode').textContent=room;
+  $('peopleInfo').textContent="총 "+N+"명 (방장 포함)";
+}
+
+function makeQR(){
+  const url="https://sadari-01.netlify.app";
+  $('qr').src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(url);
+  $('shareText').innerHTML="QR 접속 후 <b>참가하기</b>를 누르고 방 코드 <b>"+room+"</b>을 입력하세요.";
+}
+
+async function startGame(){
+  if(!isHost || started || busy)return;
+  busy=true;
+  try{
+    const d=await api('start',{room,token:hostToken});
+    applyState(d);
+    const startBtn=document.querySelector('#hostControls button.primary');
+    if(startBtn){startBtn.disabled=true;startBtn.textContent="🪜 사다리 진행 중";startBtn.style.opacity=".55";}
+    alert("사다리가 시작되었습니다. 참가자들은 지금부터 번호를 선택할 수 있습니다.");
+  }catch(e){alert(e.message)}finally{busy=false}
+}
+
+async function pick(n){
+  if(!started||myNum||Object.values(players).some(p=>p.num===n)||busy||!playerId)return;
+  $('status').textContent=`${n}번 선택 확인 중...`;
+  $('numbers').querySelectorAll('button').forEach(b=>b.disabled=true);
+  busy=true;
+  try{
+    const d=await api('pick',{room,id:playerId,num:Number(n)});
+    if(d.state)applyState(d);
+    if(d.accepted){
+      myNum=Number(n);
+      $('status').textContent=`${myNum}번 선택 완료 · 사다리 결과를 공개합니다`;
+      const me=players[playerId];
+      if(me)showReveal(me.name,myNum,outcomes[myNum-1],false);
+    }
+  }catch(e){
+    renderNumbers();
+    $('status').textContent="번호 선택에 실패했습니다. 다른 번호를 선택하세요.";
+    alert(e.message||"이미 다른 참가자가 먼저 선택한 번호입니다. 다른 번호를 선택하세요.");
+  }finally{busy=false}
+}
+
+async function resetGame(){
+  if(!isHost)return;
+  try{
+    await api('reset',{room,token:hostToken});
+    location.reload();
+  }catch(e){alert(e.message)}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const roomEl=$('roomInput'), nameEl=$('nameInput');
+  const joinBtn=$('joinBox')?.querySelector('button');
+  if(roomEl){
+    roomEl.setAttribute('inputmode','numeric');
+    roomEl.setAttribute('maxlength','2');
+    roomEl.addEventListener('input',()=>{
+      roomEl.value=roomEl.value.replace(/\D/g,'').slice(0,2);
+      if(roomEl.value.length===2){blurInput(roomEl);setTimeout(focusNameInput,50)}
+    });
+  }
+  if(joinBtn)joinBtn.addEventListener('click',()=>{blurInput(roomEl);blurInput(nameEl)});
+});
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && room) getState();
+});
+window.addEventListener('pageshow',()=>{if(room)getState()});
+
+function render(){
+  const arr=Object.values(players);
+  let html=arr.map(p=>'<div class="player"><b>'+esc(p.name)+'</b><br><small>'+(p.num?"선택 "+p.num+"번":"번호 선택 대기")+'</small></div>').join('');
+  if(isHost) html='<div class="player"><b>방장</b><br><small>남은 번호 자동 배정</small></div>'+html;
+  $('players').innerHTML=html||'<div class="player">참가자를 기다리는 중</div>';
+}
+
+function status(){
+  const count=Object.keys(players).length+(isHost?1:0);
+  const picked=Object.values(players).filter(p=>p.num).length;
+  if(!started){
+    $('status').textContent=`현재 ${count}/${N}명 · 사다리 시작 전`;
+  }else{
+    $('status').textContent=`현재 ${count}/${N}명 · 참가자 번호 선택 ${picked}/${N-1}명`;
+  }
+}
+
+function renderNumbers(){
+  $('numberMax').textContent=N;
+  const used=new Set(Object.values(players).map(p=>p.num).filter(Boolean));
+  $('numbers').innerHTML=names.map(n=>{
+    const selected=(myNum===n);
+    const taken=used.has(n)&&!selected;
+    return `<button class="num ${selected?'selected':''} ${taken?'taken':''}" ${taken||myNum?'disabled':''} onclick="pick(${n})">${n}번</button>`;
+  }).join('');
+}
+
+function pick(n){
+  // 번호 선택은 서버(방장)가 최종 승인한 뒤 화면에 확정 표시
+  if(!started||myNum||Object.values(players).some(p=>p.num===n)||!conn)return;
+  $('status').textContent=`${n}번 선택 확인 중...`;
+  $('numbers').querySelectorAll('button').forEach(b=>b.disabled=true);
+  conn.send({type:"pick",num:Number(n)});
+}
+
+function randomLadder(){
+  const rows=14, L=Array.from({length:rows},()=>[]);
+  for(let r=0;r<rows;r++){
+    const order=Array.from({length:N-1},(_,i)=>i).sort(()=>Math.random()-.5);
+    order.forEach(c=>{
+      if(Math.random()<.34 && !L[r].some(x=>Math.abs(x-c)<=1)) L[r].push(c);
+    });
+  }
+  if(L.every(a=>a.length===0)) L[Math.floor(rows/2)]=[0,2,4,6].filter(c=>c<N-1);
+  return L;
+}
+
+function calc(L){
+  return names.map(start=>{
+    let c=start-1;
+    L.forEach(row=>{
+      if(row.includes(c)) c++;
+      else if(row.includes(c-1)) c--;
+    });
+    return c+1;
+  });
+}
+
+function startGame(){
+  if(!isHost || started)return;
+  // 수정: 방장이 먼저 사다리를 시작할 수 있도록 참가자 전원 입장 조건을 제거
+  lines=randomLadder();
+  outcomes=calc(lines);
+  started=true;
+  revealed=[];
+  $('playerControls').classList.add('hidden');
+
+  // 현재 접속자와 이후 입장자에게 동일한 사다리를 전달
+  broadcast({type:"start",lines,outcomes,N,players,revealed});
+  broadcastState();
+  showLadder(false);
+  render();
+  status();
+
+  const startBtn=document.querySelector('#hostControls button.primary');
+  if(startBtn){
+    startBtn.disabled=true;
+    startBtn.textContent="🪜 사다리 진행 중";
+    startBtn.style.opacity=".55";
+  }
+  alert("사다리가 시작되었습니다. 참가자들은 지금부터 입장하여 번호를 선택할 수 있습니다.");
+}
+
+function showLadder(animate){
+  $('ladderCard').classList.remove('hidden');
+  draw(false);
+  renderResults();
+}
+
+function pathFor(num){
+  const cv=$('ladder'), w=cv.clientWidth, h=cv.clientHeight;
+  const left=30,right=w-30,top=48,bottom=h-35,dx=(right-left)/(N-1),dy=(bottom-top)/(lines.length+1);
+  let c=num-1, path=[{x:left+c*dx,y:top}];
+  lines.forEach((row,r)=>{
+    const y=top+(r+1)*dy;
+    path.push({x:left+c*dx,y});
+    if(row.includes(c)){path.push({x:left+(c+1)*dx,y});c++}
+    else if(row.includes(c-1)){path.push({x:left+(c-1)*dx,y});c--}
+    path.push({x:left+c*dx,y});
+  });
+  path.push({x:left+c*dx,y:bottom});
+  return path;
+}
+
+function showReveal(name,num,result,isHostReveal){
+  $('ladderCard').classList.remove('hidden');
+  $('winner').classList.remove('hidden');
+  $('winner').innerHTML=(isHostReveal?'🍂 방장 결과':'🎯 '+esc(name)+' 결과')+
+    '<br><strong>'+num+'번 → '+result+'번</strong>';
+  draw(true,num);
+  renderResults();
+}
+
+function draw(animate=false, highlightNum=null){
+  const cv=$('ladder'), dpr=devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
+  if(!w||!h)return;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const left=30,right=w-30,top=48,bottom=h-35,dx=(right-left)/(N-1),dy=(bottom-top)/(lines.length+1);
+
+  ctx.lineWidth=2; ctx.strokeStyle="#8d7863";
+  for(let c=0;c<N;c++){ctx.beginPath();ctx.moveTo(left+c*dx,top);ctx.lineTo(left+c*dx,bottom);ctx.stroke()}
+
+  ctx.lineWidth=4; ctx.strokeStyle="#d96f32";
+  lines.forEach((row,r)=>row.forEach(c=>{
+    const y=top+(r+1)*dy;
+    ctx.beginPath();ctx.moveTo(left+c*dx,y);ctx.lineTo(left+(c+1)*dx,y);ctx.stroke();
+  }));
+
+  // 상단은 참가자 이름, 아직 미선택 번호는 번호로 표시
+  const labels=Array.from({length:N},(_,i)=>(i+1)+"번");
+  Object.values(players).forEach(p=>{if(p.num)labels[p.num-1]=p.name});
+  const hostEntry=revealed.find(x=>x.name==="방장");
+  if(hostEntry) labels[hostEntry.num-1]="방장";
+
+  ctx.fillStyle="#3e3025"; ctx.font="bold 14px sans-serif"; ctx.textAlign="center";
+  for(let c=0;c<N;c++) ctx.fillText(labels[c],left+c*dx,28);
+
+  const target=highlightNum || myNum;
+  if(animate && target){
+    const path=pathFor(target);
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    let i=0, step=0;
+    function anim(){
+      if(i>=path.length-1)return;
+      step+=.10;
+      const a=path[i],b=path[i+1],t=Math.min(step,1);
+      const x=b.x, y=b.y;
+      const ex=a.x+(b.x-a.x)*t, ey=a.y+(b.y-a.y)*t;
+
+      // 다크모드에서도 기존 사다리선과 확실히 구분되도록
+      // 흰색 외곽선을 먼저 그리고 그 위에 파란 진행선을 표시
+      ctx.beginPath();
+      ctx.strokeStyle="#ffffff";
+      ctx.lineWidth=12;
+      ctx.moveTo(a.x,a.y);ctx.lineTo(ex,ey);ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle="#0066ff";
+      ctx.lineWidth=8;
+      ctx.moveTo(a.x,a.y);ctx.lineTo(ex,ey);ctx.stroke();
+
+      if(t>=1)i++,step=0;
+      requestAnimationFrame(anim);
+    }
+    anim();
+  }
+}
+
+function renderResults(){
+  const sorted=revealed||[];
+  $('results').innerHTML=sorted.map((r,i)=>
+    `<div class="result"><small>${i+1}번째 공개</small><br><b>${esc(r.name)}</b><br>${r.num}번 → <b>${r.result}번</b></div>`
+  ).join('');
+}
+
+
+
+window.addEventListener('resize',()=>{if(started)draw(false)});
+</script>
+</body>
+</html>
