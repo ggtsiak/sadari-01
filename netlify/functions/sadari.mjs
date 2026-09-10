@@ -101,14 +101,33 @@ export default async (req) => {
   if(op==="join"){
     const name=String(body.name||"").trim();
     if(!/^\d{2}$/.test(room)||!name||name.length>12) return json({error:"참가 정보가 올바르지 않습니다."},400);
+
+    // 같은 방 코드 + 같은 이름이면 새 참가자로 중복 등록하지 않고
+    // 기존 참가자의 ID와 상태를 그대로 반환하여 재입장 처리합니다.
+    const entry=await readRoom(store,room);
+    if(!entry) return json({error:"방을 찾을 수 없습니다."},404);
+    const existing=Object.entries(entry.data.players||{}).find(([,p])=>p.name===name);
+    if(existing){
+      return json({
+        playerId:existing[0],
+        state:cleanState(entry.data),
+        rejoined:true
+      });
+    }
+
     const playerId=crypto.randomUUID();
     const result=await updateRoom(store,room,async s=>{
+      // 동시에 같은 이름으로 입장하는 경우에도 중복 등록을 방지합니다.
+      const same=Object.entries(s.players||{}).find(([,p])=>p.name===name);
+      if(same) return {rejoinPlayerId:same[0]};
       if(Object.keys(s.players||{}).length>=s.N-1) return {error:"참가자가 모두 찼습니다.",status:409};
-      if(Object.values(s.players||{}).some(p=>p.name===name)) return {error:"같은 이름의 참가자가 이미 있습니다. 다른 이름을 입력해 주세요.",status:409};
       s.players[playerId]={name,num:null,revealed:false};
       return null;
     });
     if(result.error)return json({error:result.error},result.status||400);
+    if(result.rejoinPlayerId){
+      return json({playerId:result.rejoinPlayerId,state:cleanState(result.state),rejoined:true});
+    }
     return json({playerId,state:cleanState(result.state)});
   }
 
