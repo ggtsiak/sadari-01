@@ -201,7 +201,8 @@ async function join(){
     if(d.rejoined){
       $('status').textContent="재입장되었습니다. 기존 선택 결과가 유지됩니다.";
     }
-    $('playerControls').classList.add('hidden');
+    // applyState()가 시작 상태에 따라 번호선택 영역을 표시합니다.
+    // 재입장 직후 다시 숨기지 않습니다.
     startPolling();
   }catch(e){
     alert(e.message||"방을 찾을 수 없습니다. 방 코드와 인터넷 연결을 확인하세요.");

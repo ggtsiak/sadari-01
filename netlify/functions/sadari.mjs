@@ -58,7 +58,10 @@ async function updateRoom(store, room, mutate) {
     if(result?.error) return result;
     state.revision=(state.revision||0)+1;
     const saved=await store.setJSON(room,state,{onlyIfMatch:entry.etag});
-    if(saved.modified) return {state};
+    if(saved.modified) {
+      const extra=(result && typeof result==="object") ? result : {};
+      return {state,...extra};
+    }
   }
   return {error:"동시에 처리된 요청이 많습니다. 잠시 후 다시 시도해 주세요.",status:409};
 }
